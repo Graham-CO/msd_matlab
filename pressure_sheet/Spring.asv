@@ -1,0 +1,24 @@
+%% Spring Class
+% Graham Williams
+% grwi2594@colorado.edu
+
+classdef Spring
+    properties
+        n1;                 % Node 1
+        n2;                 % Node 2
+        k;                  % stiffness (N/m)
+        bend;               % bending spring switch    
+        stretch;            % stretch spring switch 
+    end 
+    methods
+        function spr_obj = Spring(n1, n2, k, bendbool, stretchbool)    % Class Constructor
+            spr_obj.n1 = n1;                    
+            spr_obj.n2 = n2;
+            spr_obj.k = k;
+            spr_obj.bend = bendbool;
+            spr_obj.stretch = stretchbool;
+        end
+    end
+end
+        
+        
