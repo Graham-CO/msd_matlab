@@ -12,7 +12,7 @@ classdef Spring
     end 
     methods
         function spr_obj = Spring(n1, n2, k, bendbool, stretchbool)    % Class Constructor
-            if nargin < 5
+            if nargin < 5 
                 spr_obj.n1 = n1;                    
                 spr_obj.n2 = n2;
                 spr_obj.k = 1; % if k not specified, default to 1
