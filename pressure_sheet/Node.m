@@ -9,7 +9,7 @@ classdef Node
         v0 = [0,0,0];   % initial velocity (m/s)
         x;              % position (m)
         v;              % velocity (m/s)
-        m               % mass (kg)
+        m;               % mass (kg)
         fix;            % fixed point switch
     end
     methods
