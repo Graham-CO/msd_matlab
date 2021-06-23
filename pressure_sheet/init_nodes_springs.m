@@ -17,16 +17,17 @@ function [] = init_nodes_springs(mesh, m, r)
             node(i).fix = true; % fix edge nodes
         end
     end
-
-
+    
+    tic()
     % initialize spr_obj with node data & mesh.ConnectivityList data
     n_nodes = length(node);
 
     % each row in mesh.Points is a vertex ID
     % each element in mesh.ConnectivityList is a vertex ID
 
-    % to generate springs, first sort connectivity list 
-    sortlist1 = sortrows(mesh.ConnectivityList,1); % by first colmun
+    % to generate springs, first sort connectivity list (for visual
+    % debugging)
+    sortlist1 = sortrows(mesh.ConnectivityList,1) % by first colmun
     sortlist2 = sortrows(mesh.ConnectivityList,2); % by second column
     sortlist3 = sortrows(mesh.ConnectivityList,3); % by third column
 
@@ -34,7 +35,7 @@ function [] = init_nodes_springs(mesh, m, r)
     % IDs to which it has already connected a spring to, checking against the
     % values each time to ensure no duplicates
     map = containers.Map('KeyType', 'uint32', 'ValueType', 'any'); % each key is 1 vertex ID mapped to the value of vertex ID that it attaches a spring to
-                                                                     % can't initialize map with only keys and not values, need both or neither
+                                                                   % can't initialize map with only keys and not values, need both or neither
                                                                      
     for i = 1:n_nodes % for every node
         vals = []; % initialize valset to check against, add the values to map at the end
@@ -68,7 +69,9 @@ function [] = init_nodes_springs(mesh, m, r)
         end
         map(i) = vals; % map now has 1 key for every node, each of which maps to the nodes to which that node is connected
     end
-    
+    toc()
+    map(3)
+    map(22)
     % initialize springs using the generated map
 %     for i = 1:n_nodes
         
