@@ -25,9 +25,11 @@ r = 0.2;    % radius (m)
 % k = 1;      % stiffness (N/m)
 % c = 0.5;    % damping (Ns/m)
 
-% initialize Node and Spring class objects
-init_nodes_springs(mesh, m, r)
+% initialize Node class objects
+init_nodes(mesh, m, r)
 
+% initialize Tri class objects
+init_tris(mesh)
 % node(1)
 % node(16)
 % node(32)
