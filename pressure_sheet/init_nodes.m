@@ -1,4 +1,4 @@
-%% Node and Spring Initialization Function
+%% Node Initialization Function
 % Graham Williams
 % grwi2594@colorado.edu
 
@@ -16,8 +16,5 @@ function [] = init_nodes(mesh, m, r)
         if node(i).x0(1) == 0 || node(i).x0(1) == 1 || node(i).x0(2) == 0 || node(i).x0(2) == 1
             node(i).fix = true; % fix edge nodes
         end
-    end
-
-
-        
+    end      
 end
