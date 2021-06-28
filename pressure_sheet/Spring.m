@@ -32,9 +32,7 @@ classdef Spring < Tri
         
         function stretchC = stretch_constraint(n1, n2)
             w = n2(1) - n1(1); % along direction 1
-        end
-        
-            
+        end         
     end
 end
         
