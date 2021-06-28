@@ -4,13 +4,13 @@
 
 classdef Node
     properties
-        r;              % radius - for collision handling (m)
-        x0;             % initial position (m)
-        v0 = [0,0,0];   % initial velocity (m/s)
-        x;              % position (m)
-        v;              % velocity (m/s)
+        r               % radius - for collision handling (m)
+        x0              % initial position (m)
+        v0 = [0,0,0]    % initial velocity (m/s)
+        x               % position (m)
+        v               % velocity (m/s)
         m               % mass (kg)
-        fix;            % fixed point switch
+        fix             % fixed point switch
     end
     methods
         function node_obj = Node(x0, m, r, fixbool)
@@ -19,6 +19,11 @@ classdef Node
                 node_obj.x0 = x0;
                 node_obj.m = m;
                 node_obj.fix = false;
+            else                            % don't think is needed, but don't want the underline         
+                node_obj.r = r; 
+                node_obj.x0 = x0;
+                node_obj.m = m;
+                node_obj.fix = fixbool;
             end
         end
     end
