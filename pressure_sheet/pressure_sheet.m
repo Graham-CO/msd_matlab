@@ -26,10 +26,19 @@ r = 0.2;    % radius (m)
 % c = 0.5;    % damping (Ns/m)
 
 % initialize Node class objects
-init_nodes(mesh, m, r)
+nodes = init_nodes(mesh, m, r);
 
 % initialize Tri class objects
-init_tris(mesh)
-% node(1)
-% node(16)
-% node(32)
+tris = init_tris(mesh, nodes);
+
+% initialize Spring class objects
+[b_sprs, s_sprs] = init_sprs(mesh, nodes);
+
+tris(1)
+tris(2)
+nodes(1)
+nodes(2)
+
+
+
+
