@@ -142,8 +142,10 @@ classdef Tri
             dCu_dx = cell2mat(dCu_dx);
             dCv_dx = cell2mat(dCv_dx);
         
-            % add force to node force vector
-            for i = 1:1
+            % add force to node force vector - think will need to pass the
+            % nodes() class vector in and set it that way, or figure out
+            % how MATLAB does inheritance..
+            for i = 1:3
                 val = -k * (dCu_dx(i,:)*Cu + dCv_dx(i,:)*Cv)
                 
                 % pass nodes into Tri as a vec to make this better
