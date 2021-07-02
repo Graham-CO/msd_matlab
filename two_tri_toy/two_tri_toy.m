@@ -26,9 +26,6 @@ tris = init_tris(mesh, nodes);
 calcStretch(tris(1))
 calcStretch(tris(2))
 
-nodes(1).f0 % these are 0 right now because constraint is satisfied...
-nodes(2).f0 % will change upon application of pressure forces.. HOPEFULLY
-
 % Ps = mesh.Points
 % CL = mesh.ConnectivityList
 

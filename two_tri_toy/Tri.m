@@ -143,8 +143,8 @@ classdef Tri
             dCv_dx = cell2mat(dCv_dx);
         
             % add force to node force vector
-            for i = 1:3
-                val = -k * (dCu_dx(i,:)*Cu + dCv_dx(i,:)*Cv);
+            for i = 1:1
+                val = -k * (dCu_dx(i,:)*Cu + dCv_dx(i,:)*Cv)
                 
                 % pass nodes into Tri as a vec to make this better
                 if i == 1
