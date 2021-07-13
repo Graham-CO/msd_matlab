@@ -8,7 +8,7 @@ load('mesh.mat')
 % Alternatively input a triangulation
 nodes = mesh.Points;
 tris = mesh.ConnectivityList;
-edges = mesh.edges
+edges = mesh.edges;
 
 %% Open a text file
 % If you would like a different format, designate so here
