@@ -1,8 +1,9 @@
+using BenchmarkTools: time
 using Makie
 using GeometryBasics
-using BenchmarkTools
+using VectorizedRoutines
 using LinearAlgebra
-using SparseArrays
+using PrettyTables
 import DelimitedFiles: readdlm
 
 # Solution Paramaters
@@ -43,28 +44,39 @@ function impShell()
     d = Array{Float64, 1}(undef, length(PL))
     v = Array{Float64, 1}(undef,length(PL))
     
-    for t = 1:1
+    for t = 0:dt:tsim
 
-        i = [] # index vec for sparse mat
-        k = [] # accum vec for sparse mat
+        i = reshape(Int[], 0, 2) # index vec for sparse mat
+        k = Float64[] # accum vec for sparse mat
         f = zeros(length(PL),1)
 
         # Assemble stiffness matrix
         # This will 
-        for ele = 1:1
+        for ele = 1:size(EL,2)
 
             # Store coords of end points
             V = [ PL[:, EL[1,ele]]+d[3*EL[1,ele].-[2; 1; 0;]]   PL[:, EL[2,ele]]+d[3*EL[2,ele].-[2; 1; 0;]] ]
 
             # Compute stiffness
             ke = SpringStiffnessMatrix(V,L[ele])
-            
-            
+
+            # Nodal degrees of freedom
+            ne = [3*EL[1, ele].-[2; 1; 0;]' 3*EL[2,ele].-[2;1;0]']
+    
+            je = [ne; ne; ne; ne; ne; ne;]
+
+            ie = [ne'; ne'; ne'; ne'; ne'; ne']
+
+            tmp = [ie je[:]]
+
+            i = [i; tmp]
+            k = [k; ke[:]]
         end
-
+       
+        K = accumarray(i,k)
+        display(size(k))
+        
     end
-
-
     
     # Convert to GeometryBasics.Mesh
     pts = [Point3f0(val[1], val[2], val[3]) for val in eachcol(PL)]
@@ -100,12 +112,22 @@ function SpringStiffnessMatrix(V,k)
     Cy = (V[2,1] - V[2,2])/L
     Cz = (V[3,1] - V[3,2])/L
 
-    display(V)
     A = [Cx^2 Cx*Cy Cx*Cz; Cy*Cx Cy^2 Cy*Cz; Cz*Cx Cz*Cy Cz^2]
-    display(A)
+    
+    K = k*[A -A; -A A]
 
+    return K
+end
 
+function accumarray(subs, val, sz=(maximum(subs[:,1])))
+    A = zeros(eltype(val[1]), sz,sz)
+    for i = 1:size(subs,1)
+        @inbounds A[i] += val[i]
+    end
+    @pt A
+    return A
 end
 
 impShell()
+
 
