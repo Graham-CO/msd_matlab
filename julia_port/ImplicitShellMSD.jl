@@ -44,21 +44,24 @@ function impShell()
     d = Array{Float64, 1}(undef, length(PL))
     v = Array{Float64, 1}(undef,length(PL))
     
+    
     for t = 0:dt:tsim
 
         i = reshape(Int[], 0, 2) # index vec for sparse mat
         k = Float64[] # accum vec for sparse mat
         f = zeros(length(PL),1)
 
-        # Assemble stiffness matrix
-        # This will 
+        # Assemble stiffness matrix 
+        
         for ele = 1:size(EL,2)
 
             # Store coords of end points
             V = [ PL[:, EL[1,ele]]+d[3*EL[1,ele].-[2; 1; 0;]]   PL[:, EL[2,ele]]+d[3*EL[2,ele].-[2; 1; 0;]] ]
-
+            
+            
             # Compute stiffness
             ke = SpringStiffnessMatrix(V,L[ele])
+            
 
             # Nodal degrees of freedom
             ne = [3*EL[1, ele].-[2; 1; 0;]' 3*EL[2,ele].-[2;1;0]']
@@ -72,26 +75,62 @@ function impShell()
             i = [i; tmp]
             k = [k; ke[:]]
         end
-       
+        
+        ts = time_ns()
         K = accumarray(i,k)
-        display(size(k))
+        te = time_ns() - ts
+        display(te*1e-9)
+        
+        # Assemble force vector 
+        for el = 1:size(CL,2)
+            ea = PL[:, CL[2,el]] - PL[:, CL[1,el]]
+            eb = PL[:, CL[3,el]] - PL[:, CL[1,el]]
+            fe = (p/6)*cross(ea,eb)
+            ne = [3*CL[1,el].-[2; 1; 0] 3*CL[2,el].-[2;1;0] 3*CL[3,el].-[2; 1; 0]]
+            f[ne] = repeat(fe,3,1)    
+        end
+        
+
+        
+        a = Matrix{Float64}(undef,96,1)
+        # Solve for accelerations at first time step
+        if t == 0
+            a = inv(M) * (f - (C*v + K*d))
+        end
+        
+        v_predict = Matrix{Float64}(undef,96,1)
+        d_predict = Matrix{Float64}(undef,96,1)
+        
+        # Solve for predictors
+        v_predict = v + dt * (1-gamma)*a
+        d_predict = d + dt * v + dt^2/2 * (1-2*beta)*a 
+        
+
+        # Solve for accelerations
+        a = inv(M + gamma*dt*C + beta*dt^2*K) * (f - (C*v_predict + K*d_predict))
+
+
+        # Apply Correctors
+        v = v_predict + gamma*dt*a
+        d = d_predict + beta*dt^2*a
+        
         
     end
     
-    # Convert to GeometryBasics.Mesh
-    pts = [Point3f0(val[1], val[2], val[3]) for val in eachcol(PL)]
-    fcs = [TriangleFace(val[1], val[2], val[3]) for val in eachcol(CL)] 
-    msh = GeometryBasics.Mesh(pts, fcs)
+    
+    # # Convert to GeometryBasics.Mesh
+    # pts = [Point3f0(val[1], val[2], val[3]) for val in eachcol(PL)]
+    # fcs = [TriangleFace(val[1], val[2], val[3]) for val in eachcol(CL)] 
+    # msh = GeometryBasics.Mesh(pts, fcs)
 
 
     
-    # Plot Mesh 
-    scn = Makie.mesh(msh, color = 1 : length(msh.position))
+    # # Plot Mesh 
+    # scn = Makie.mesh(msh, color = 1 : length(msh.position))
     
-    Makie.wireframe!(msh)
+    # Makie.wireframe!(msh)
 
-    display(scn)
-
+    # display(scn)
 
 end
 
@@ -119,14 +158,19 @@ function SpringStiffnessMatrix(V,k)
     return K
 end
 
-function accumarray(subs, val, sz=(maximum(subs[:,1])))
-    A = zeros(eltype(val[1]), sz,sz)
+function accumarray(subs, val; sz=maximum(subs[:,1]))
+    counts = Dict()
+    
     for i = 1:size(subs,1)
-        @inbounds A[i] += val[i]
+         counts[subs[i,:]]=[get(counts,subs[i,:],[]);val[i...]]    
     end
-    @pt A
+    
+    A = zeros(sz,sz)
+    for j = keys(counts)
+         A[j...] = sum(counts[j])
+    end
     return A
-end
+ end
 
 impShell()
 
