@@ -1,7 +1,6 @@
-using BenchmarkTools: time
+
 using Makie
 using GeometryBasics
-using VectorizedRoutines
 using LinearAlgebra
 using PrettyTables
 import DelimitedFiles: readdlm
