@@ -15,10 +15,7 @@ function expShell()
     # Import pointslist, connectivitylist, and edgelist
     PL, CL, EL = importMesh()
     
-    
-
-
-    # Calculate nodal masses, assemble mass & damping matrices
+    # Calculate nodal masses, assemble mass & damping vectors
     m = zeros(Float64, 96, 1)
     for el ∈ 1:size(CL,2)
         ea = PL[:, CL[2,el]] - PL[:, CL[1,el]]
@@ -36,18 +33,14 @@ function expShell()
     v = zeros(Float64, length(PL), 1)
     a = zeros(Float64, length(PL), 1)
     
-    k = Float64[] # accum vec for sparse mat
+    k = Float64[] # accum vec for sparse mat NOT USING THIS RN, BC SETTING stiffness == restLength for each spring
+    
+    # Assemble force vector
     f = zeros(length(PL),1)
-
 
     # Calculate resting length of springs
     L = Array{Float64, 1}(undef,77)  
-    L .=  sqrt.(sum(eachrow((PL[:,EL[1,:]]-PL[:,EL[2,:]]).^2))) 
-
-    
-    
-    
-    # Assemble force vector
+    L .=  sqrt.(sum(eachrow((PL[:,EL[1,:]]-PL[:,EL[2,:]]).^2)))
 
     # Add pressure forces 
     for el = 1:size(CL,2)
@@ -58,17 +51,17 @@ function expShell()
         f[ne] = repeat(fe,3,1)    
     end
     
-    # Add spring forces (and damping soon) 
+    # Add spring forces (should also calc damp forces here) 
     for ele = 1:size(EL,2)
 
         V = [ PL[:, EL[1,ele]]+d[3*EL[1,ele].-[2; 1; 0;]]   PL[:, EL[2,ele]]+d[3*EL[2,ele].-[2; 1; 0;]] ] # Coords of nodes belonging to this spring
-        dL1 = sqrt(sum((V[:,2] - V[:,1]).^2)) # That minus this for node 1
-        dL2 = sqrt(sum((V[:,1] - V[:,2]).^2)) # That minus this for node 2  
+        dL = sqrt(sum((V[:,2] - V[:,1]).^2)) # Length of deformed spring (after t = 0)
+          
+        ne = [3*EL[1,ele].-[2; 1; 0] 3*EL[2,ele].-[2; 1; 0]] # Indexing for each node within force vector 
 
-        ne = [3*EL[1,ele].-[2; 1; 0] 3*EL[2,ele].-[2; 1; 0]] # 
-        f[ne[:,1]] .+= -L[ele]*(dL1 - L[ele])
-        f[ne[:,2]] .+= -L[ele]*(dL2 - L[ele])
-    
+        f[ne[:,1]] .+= -L[ele]*(dL - L[ele])*(V[:,2] - V[:,1])/dL # For node1 of edge, f = k*(norm(pt2-pt1) - restLength)*(pt2-pt1)/norm(pt2-pt1)
+        f[ne[:,2]] .+= -L[ele]*(dL - L[ele])*(V[:,1] - V[:,2])/dL # Same for node2 of edge, except direction flipped, so that f = k*(norm(pt2-pt1) - restLength)*(pt1-pt2)/norm(pt2-pt1)
+
     end
     
 
