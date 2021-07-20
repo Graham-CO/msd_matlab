@@ -75,10 +75,7 @@ function impShell()
             k = [k; ke[:]]
         end
         
-        ts = time_ns()
         K = accumarray(i,k)
-        te = time_ns() - ts
-        display(te*1e-9)
         
         # Assemble force vector 
         for el = 1:size(CL,2)
@@ -100,9 +97,10 @@ function impShell()
         v_predict = Matrix{Float64}(undef,96,1)
         d_predict = Matrix{Float64}(undef,96,1)
         
+
         # Solve for predictors
-        v_predict = v + dt * (1-gamma)*a
-        d_predict = d + dt * v + dt^2/2 * (1-2*beta)*a 
+        v_predict = v .+ dt * (1-gamma).*a
+        d_predict = d .+ dt * v .+ dt^2/2 * (1-2*beta).*a 
         
 
         # Solve for accelerations
@@ -113,9 +111,8 @@ function impShell()
         v = v_predict + gamma*dt*a
         d = d_predict + beta*dt^2*a
         
-        
+        bkpt = 1
     end
-    
     
     # # Convert to GeometryBasics.Mesh
     # pts = [Point3f0(val[1], val[2], val[3]) for val in eachcol(PL)]
