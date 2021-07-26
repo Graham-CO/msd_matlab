@@ -46,7 +46,7 @@ function expShell()
     # du = similar(s₀)
     # accel(du,s₀, params, 0.0)
 
-    prob = ODEProblem(accel, s₀, (0.0,10.0), params)
+    prob = ODEProblem(accel, s₀, (0.0,45.0), params)
     sol = solve(prob)
 
     
@@ -128,23 +128,28 @@ function plotMesh(s, EL, t)
     # scn = mk.mesh(msh, color = 1 : length(msh.position), camera = cam3d!)
 
     scene = mk.Scene()
+    mk.Camera3D(scene)
 
-    pts = Array{Vector{Float64}, 1}(undef,size(s,1))
-    # lines = Array{Float64,2}(undef, )
+    pts = []
+    lines = Array{Float64, 2}(undef, length(EL),3)
 
+    for i ∈ 1:size(s,1)
+        pts = reshape(s[i][1:96], 3, 32)' 
 
-    for i ∈ 1:size(s, 1)
-        pts[i] = s[i][1:96]
+        for j ∈ 1:size(EL,2)
+            lines[2*j-1,:] = s[i][3*EL[1,j].-[2;1;0;]]
+            lines[2*j,:] = s[i][3*EL[2,j].-[2;1;0]]
+        end
+        
+        mk.scatter!(scene, pts, markersize=10, color = :red)
+        mk.linesegments!(scene, lines, color = :red, linewidth = 2)
+        
     end
-
-    # for i ∈ 1:size(s,1)
-    #     for j ∈ 1:size(EL,2)
-    #         lines[2*i-1,:] =s[i, 3*EL[1,j].-[2;1;0;]]
-    #         lines[2*i,:] = s[i, 3*EL[2,j].-[2;1;0]]
-    #     end
-    # end
+    display(scene)
+    # mk.record(scene, "test.mp4", 1:size(s,1); framerate = 30)
+        
     # @pt lines
-    @pt pts
+    # @pt pts
 
     # display(scn)
 end
