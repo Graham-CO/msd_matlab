@@ -79,8 +79,8 @@ function impShell()
         
         # Assemble force vector 
         for el = 1:size(CL,2)
-            ea = PL[:, CL[2,el]] - PL[:, CL[1,el]]
-            eb = PL[:, CL[3,el]] - PL[:, CL[1,el]]
+            ea = (PL[:, CL[2,el]]+d[3*CL[2,el].-[2;1;0]]) - (PL[:, CL[1,el]]+d[3*CL[1,el].-[2;1;0]])
+            eb = (PL[:, CL[3,el]]+d[3*CL[3,el].-[2;1;0]]) - (PL[:, CL[1,el]]+d[3*CL[1,el].-[2;1;0]])
             fe = (p/6)*cross(ea,eb)
             ne = [3*CL[1,el].-[2; 1; 0] 3*CL[2,el].-[2;1;0] 3*CL[3,el].-[2; 1; 0]]
             f[ne] = repeat(fe,3,1)    
@@ -100,8 +100,16 @@ function impShell()
 
         # Solve for predictors
         v_predict = v .+ dt * (1-gamma).*a
-        d_predict = d .+ dt * v .+ dt^2/2 * (1-2*beta).*a 
+
+        tmp1 = d.+ dt
+        tmp2 = v.+ dt^2/2
+        tmp3 = (1-2*beta).*a
+
         
+
+        bkpt = 1
+        d_predict = d + dt * v + dt^2/2 * (1-2*beta)*a 
+        bkpt =1 
 
         # Solve for accelerations
         a = inv(M + gamma*dt*C + beta*dt^2*K) * (f - (C*v_predict + K*d_predict))
@@ -110,8 +118,7 @@ function impShell()
         # Apply Correctors
         v = v_predict + gamma*dt*a
         d = d_predict + beta*dt^2*a
-        
-        bkpt = 1
+
     end
     
     # # Convert to GeometryBasics.Mesh
@@ -121,7 +128,7 @@ function impShell()
 
 
     
-    # # Plot Mesh 
+    # Plot Mesh 
     # scn = Makie.mesh(msh, color = 1 : length(msh.position))
     
     # Makie.wireframe!(msh)

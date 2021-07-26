@@ -31,7 +31,7 @@ m = zeros(numel(PT),1);
 
 for el = 1:size(CM,1)                        %index thru triangles
     ea = PT(CM(el,2),:) - PT(CM(el,1),:);         %one edge vector
-    eb = PT(CM(el,3),:) - PT(CM(el,1),:);         %another edge vector
+    eb = PT(CM(el,3),:)+d(3*CM(el,3)-[2 1 0])) - PT(CM(el,1),:)+d(3*CM(el,1)-[2 1 0]));         %another edge vector
     A = norm(cross(ea,eb)/2);                     %area of this triangle
     ne = [3*CM(el,1)-[2 1 0] 3*CM(el,2)-[2 1 0] 3*CM(el,3)-[2 1 0]];
     m(ne) = m(ne) + th*rho*A/3;   %account for this mass
@@ -91,8 +91,8 @@ for t = 0:dt:tsim
     %Assemble the force vector
     
     for el = 1:size(CM,1)
-        ea = (PT(CM(el,2),:)+d(3*CM(el,2)-[2 1 0])')-(PT(CM(el,1),:)+d(3*CM(el,1)-[2 1 0])');
-        eb = (PT(CM(el,3),:)+d(3*CM(el,3)-[2 1 0])')-(PT(CM(el,1),:)+d(3*CM(el,1)-[2 1 0])');
+        ea = (PT(CM(el,2),:)+d(3*CM(el,2)-[2 1 0]))-(PT(CM(el,1),:)+d(3*CM(el,1)-[2 1 0]));
+        eb = PT(CM(el,3),:)-PT(CM(el,1),:);
         fe = (p/6)*cross(ea,eb);
         ne = [3*CM(el,1)-[2 1 0] 3*CM(el,2)-[2 1 0] 3*CM(el,3)-[2 1 0]];
         f(ne) = repmat(fe,1,3);
@@ -117,11 +117,11 @@ for t = 0:dt:tsim
       
     %display
 
-    trimesh(triangulation(CM,PT + reshape(d,3,[])'),'facecolor','w','edgecolor','b')
-    axis([0 1 0 1 0 1])
-    drawnow()
+%     trimesh(triangulation(CM,PT + reshape(d,3,[])'),'facecolor','w','edgecolor','b')
+%     axis([0 1 0 1 0 1])
+%     drawnow()
 
-bkpt=1
+
 end
 
 toc
