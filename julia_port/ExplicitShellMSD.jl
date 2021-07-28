@@ -1,7 +1,7 @@
 using GeometryBasics
-using LinearAlgebra
 using DifferentialEquations
 using PrettyTables
+import LinearAlgebra as lin
 import GLMakie as mk
 import DelimitedFiles: readdlm
 
@@ -21,7 +21,7 @@ function expShell()
     for el ∈ 1:size(CL,2)
         ea = PL[:, CL[2,el]] - PL[:, CL[1,el]]
         eb = PL[:, CL[3,el]] - PL[:, CL[1,el]]
-        A = norm(cross(ea,eb)/2)
+        A = lin.norm(lin.cross(ea,eb)/2)
         ne = [3*CL[1,el].-[2; 1; 0] 3*CL[2,el].-[2; 1; 0] 3*CL[3,el].-[2; 1; 0]]
         m[ne] .+= (th*rho*A/3)*10000  # mass is calc'd as th*density*area/3 - three is since 3 points on tri --- iterated for each triangle the mass belongs to
     end
@@ -40,13 +40,13 @@ function expShell()
     # Calculate resting length of springs
     L = Array{Float64, 1}(undef,77)  
     L .=  sqrt.(sum(eachrow((PL[:,EL[1,:]]-PL[:,EL[2,:]]).^2)))
-    
+
     params = (PL, CL, EL, L, m, f, c)
 
     # du = similar(s₀)
     # accel(du,s₀, params, 0.0)
 
-    prob = ODEProblem(accel, s₀, (0.0,45.0), params)
+    prob = ODEProblem(accel, s₀, (0.0,65.0), params)
     sol = solve(prob)
 
     
@@ -79,7 +79,7 @@ function accel(a, s, params, t)
     for el = 1:size(CL,2)
         ea = (s[3*CL[2,el].-[2; 1; 0;]]) - (s[3*CL[1,el].-[2; 1; 0;]])
         eb = (s[3*CL[3,el].-[2; 1; 0;]]) - (s[3*CL[1,el].-[2; 1; 0;]])
-        fe = (p/6)*cross(ea,eb)
+        fe = (p/6)*lin.cross(ea,eb)
         ne = [3*CL[1,el].-[2; 1; 0]; 3*CL[2,el].-[2;1;0]; 3*CL[3,el].-[2; 1; 0]]
         
         f[ne] += repeat(fe,3,1)
@@ -87,28 +87,33 @@ function accel(a, s, params, t)
     bkpt =1
     # Add spring & damping forces  
     for ele = 1:size(EL,2)
-
+        tmp1 = 3*EL[1,ele].-[2; 1; 0]
+        tmp2 = (3*EL[1,ele].-[2; 1; 0]).+96
+        tmp3 = s[(3*EL[1,ele].-[2; 1; 0]).+96]
         P = [ (s[3*EL[1,ele].-[2; 1; 0;]])   (s[3*EL[2,ele].-[2; 1; 0;]]) ] # Coords of nodes belonging to this spring
         V = [ s[(3*EL[1,ele].-[2; 1; 0;]).+96]     s[(3*EL[2,ele].-[2; 1; 0;]).+96] ] # Velocities of nodes belonging to this spring
 
-        dL = sqrt(sum((P[:,2] - P[:,1]).^2)) # Length of deformed spring (after t = 0)
-        
-        disp = dL - L[ele] # Displacement from rest
-        relV = (V[:,2] - V[:,1]) # Relative velocity
+        norm = lin.norm(P[:,2]-P[:,1])  # L-2 norm of node positions (distance)
 
-        n_hat = (P[:,2] - P[:,1])/dL # Directional unit vector
-        
-        spr = L[ele]*disp # Spring force
-        damp = dot((1/c[ele]).*relV, n_hat) # Damping force
+        n_hat = [ ((P[:,2]-P[:,1])/norm) ((P[:,1]-P[:,2])/norm) ]   # This minus That for each node
+
+        spr = [ ((L[ele]*(norm-L[ele]))*n_hat[:,1])  (L[ele]*(norm-L[ele])*n_hat[:,2]) ] # k*(spring_length - spring_rest_length)*n_hat
+
+        damp = [ ((1/c[ele])*lin.dot(V[:,2]-V[:,1], n_hat[:,1])*n_hat[:,1]) ((1/c[ele])*lin.dot(V[:,1]-V[:,2], n_hat[:,2])*n_hat[:,2]) ] # c * (V[that]-V[this] ⋅ n_hat[that-this]) * n_hat[that-this]
+
+        # F = [ (spr[:,1]+damp[:,1]) (spr[:,2]+damp[:,2])]
+
+        bkpt =1
           
         ne = [3*EL[1,ele].-[2; 1; 0] 3*EL[2,ele].-[2; 1; 0]] # Indexing for each node within force vector 
-
-        neg = -n_hat
         
-        f[ne[:,1]] += -(spr + damp).*n_hat 
-        f[ne[:,2]] += -(spr + damp).*(-n_hat) 
+        f[ne[:,1]] += ( spr[:,1] + damp[:,1]) 
+        f[ne[:,2]] += ( spr[:,2] + damp[:,2])
+
+
         
     end
+    f[fixed] .= 0
     bkpt = 1
     a[1:96] = s[97:192]
     a[97:192] = f ./ m
@@ -117,23 +122,13 @@ function accel(a, s, params, t)
 end
 
 function plotMesh(s, EL, t)
-    # fcs = [TriangleFace(val[1], val[2], val[3]) for val in eachcol(CL)]
-    # pts = Array{Vector{Point{3, Float32}}, 1}(undef, size(states,1))
-    # for i = 1:size(states,1)
-    #     pts[i] = [Point3f0(val[1], val[2], val[3]) for val in eachrow(reshape(states[i][1:96],3,32)')]
-    # end
-
-    # msh = GeometryBasics.Mesh(pts, fcs)
-    # msh = mk.wireframe!(msh)
-    # scn = mk.mesh(msh, color = 1 : length(msh.position), camera = cam3d!)
-
     scene = mk.Scene()
     mk.Camera3D(scene)
 
     pts = []
     lines = Array{Float64, 2}(undef, length(EL),3)
 
-    for i ∈ 1:size(s,1)
+    for i ∈ size(s,1):size(s,1)
         pts = reshape(s[i][1:96], 3, 32)' 
 
         for j ∈ 1:size(EL,2)
