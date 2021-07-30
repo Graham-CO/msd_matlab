@@ -1,4 +1,4 @@
-
+using BenchmarkTools
 using Makie
 using GeometryBasics
 using LinearAlgebra
@@ -42,99 +42,74 @@ function impShell()
     # 0'd arrays for holding disp/vel
     d = Array{Float64, 1}(undef, length(PL))
     v = Array{Float64, 1}(undef,length(PL))
+    a = Matrix{Float64}(undef,96,1)
+    v_predict = Matrix{Float64}(undef,96,1)
+    d_predict = Matrix{Float64}(undef,96,1)
+    # f = Array{Float64, 1}(undef, length(PL))
     
-    
+    ts = time_ns()
     for t = 0:dt:tsim
 
         i = reshape(Int[], 0, 2) # index vec for sparse mat
         k = Float64[] # accum vec for sparse mat
-        f = zeros(length(PL),1)
+        f = zeros(length(PL),1) # 0'd vec for forces
 
         # Assemble stiffness matrix 
-        
         for ele = 1:size(EL,2)
 
             # Store coords of end points
             V = [ PL[:, EL[1,ele]]+d[3*EL[1,ele].-[2; 1; 0;]]   PL[:, EL[2,ele]]+d[3*EL[2,ele].-[2; 1; 0;]] ]
             
-            
             # Compute stiffness
             ke = SpringStiffnessMatrix(V,L[ele])
             
-
             # Nodal degrees of freedom
-            ne = [3*EL[1, ele].-[2; 1; 0;]' 3*EL[2,ele].-[2;1;0]']
-    
-            je = [ne; ne; ne; ne; ne; ne;]
-
-            ie = [ne'; ne'; ne'; ne'; ne'; ne']
-
-            tmp = [ie je[:]]
-
-            i = [i; tmp]
-            k = [k; ke[:]]
+            ne = vec([3*EL[1, ele].-[2; 1; 0;]' 3*EL[2,ele].-[2;1;0]'])
+            
+            je, ie = meshgrid(ne)
+                     
+            i= vcat(i, [ie[:] je[:]])
+            k = vcat(k, ke[:])           
         end
+        
         
         K = accumarray(i,k)
         
+        
+        
         # Assemble force vector 
         for el = 1:size(CL,2)
-            ea = (PL[:, CL[2,el]]+d[3*CL[2,el].-[2;1;0]]) - (PL[:, CL[1,el]]+d[3*CL[1,el].-[2;1;0]])
-            eb = (PL[:, CL[3,el]]+d[3*CL[3,el].-[2;1;0]]) - (PL[:, CL[1,el]]+d[3*CL[1,el].-[2;1;0]])
+            ea = PL[:, CL[2,el]] - PL[:, CL[1,el]]
+            eb = PL[:, CL[3,el]] - PL[:, CL[1,el]]
             fe = (p/6)*cross(ea,eb)
             ne = [3*CL[1,el].-[2; 1; 0] 3*CL[2,el].-[2;1;0] 3*CL[3,el].-[2; 1; 0]]
             f[ne] = repeat(fe,3,1)    
         end
         
-
         
-        a = Matrix{Float64}(undef,96,1)
+        
         # Solve for accelerations at first time step
         if t == 0
             a = inv(M) * (f - (C*v + K*d))
         end
         
-        v_predict = Matrix{Float64}(undef,96,1)
-        d_predict = Matrix{Float64}(undef,96,1)
         
-
+        
         # Solve for predictors
-        v_predict = v .+ dt * (1-gamma).*a
-
-        tmp1 = d.+ dt
-        tmp2 = v.+ dt^2/2
-        tmp3 = (1-2*beta).*a
-
-        
-
-        bkpt = 1
+        v_predict = v + dt * (1-gamma)*a
         d_predict = d + dt * v + dt^2/2 * (1-2*beta)*a 
-        bkpt =1 
-
+        
         # Solve for accelerations
         a = inv(M + gamma*dt*C + beta*dt^2*K) * (f - (C*v_predict + K*d_predict))
 
-
         # Apply Correctors
         v = v_predict + gamma*dt*a
-        d = d_predict + beta*dt^2*a
-
+        d = d_predict + beta*dt^2*a   
+        bkpt = 1   
     end
+    te = time_ns() - ts
+    display(te*1e-9)
     
-    # # Convert to GeometryBasics.Mesh
-    # pts = [Point3f0(val[1], val[2], val[3]) for val in eachcol(PL)]
-    # fcs = [TriangleFace(val[1], val[2], val[3]) for val in eachcol(CL)] 
-    # msh = GeometryBasics.Mesh(pts, fcs)
-
-
-    
-    # Plot Mesh 
-    # scn = Makie.mesh(msh, color = 1 : length(msh.position))
-    
-    # Makie.wireframe!(msh)
-
-    # display(scn)
-
 end
 
 function importMesh()
@@ -162,19 +137,25 @@ function SpringStiffnessMatrix(V,k)
 end
 
 function accumarray(subs, val; sz=maximum(subs[:,1]))
-    counts = Dict()
-    
-    for i = 1:size(subs,1)
-         counts[subs[i,:]]=[get(counts,subs[i,:],[]);val[i...]]    
-    end
-    
     A = zeros(sz,sz)
-    for j = keys(counts)
-         A[j...] = sum(counts[j])
+    for i ∈ 1:size(subs,1)
+        @inbounds begin
+        A[subs[i,1], subs[i,2]] += val[i]
+        end
     end
     return A
  end
 
-impShell()
+function meshgrid(x::AbstractVector{T}, y::AbstractVector{T}) where {T}
+    m, n = length(y), length(x)
+    x = reshape(x, 1, n)
+    y = reshape(y, m, 1)
+    (repeat(x, m, 1), repeat(y, 1, n))
+end
 
+meshgrid(v::AbstractVector) = meshgrid(v,v)
+
+for i ∈ 1:5
+    impShell()
+end
 
