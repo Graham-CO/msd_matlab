@@ -6,7 +6,7 @@ import GLMakie as mk
 import DelimitedFiles: readdlm
 
 # Solution Parameters
-global const p = 0.01              # applied pressure
+global const p = 1              # applied pressure
 global const fixed = 1:48       # fixed nodes (edges)
 global const th = 0.1           # material thickness
 global const rho = 10           # material density
@@ -23,11 +23,11 @@ function expShell()
         eb = PL[:, CL[3,el]] - PL[:, CL[1,el]]
         A = lin.norm(lin.cross(ea,eb)/2)
         ne = [3*CL[1,el].-[2; 1; 0] 3*CL[2,el].-[2; 1; 0] 3*CL[3,el].-[2; 1; 0]]
-        m[ne] .+= (th*rho*A/3)*10000  # mass is calc'd as th*density*area/3 - three is since 3 points on tri --- iterated for each triangle the mass belongs to
+        m[ne] .+= (th*rho*A/3)*10000000  # mass is calc'd as th*density*area/3 - three is since 3 points on tri --- iterated for each triangle the mass belongs to
     end
-    m[fixed] .= 1e4
+    # m[fixed] .= 1e10
     
-    c = damp*m # damping
+    c = damp*m
     
     # Initialize state vector
     d₀ = reshape(PL, length(PL), 1)
@@ -39,21 +39,25 @@ function expShell()
 
     # Calculate resting length of springs
     L = Array{Float64, 1}(undef,77)  
-    L .=  sqrt.(sum(eachrow((PL[:,EL[1,:]]-PL[:,EL[2,:]]).^2)))
+    L .=  sqrt.(sum(eachrow((PL[:,EL[1,:]]-PL[:,EL[2,:]]).^2))) 
+
+    # c = damp*L # damping
 
     params = (PL, CL, EL, L, m, f, c)
 
     # du = similar(s₀)
     # accel(du,s₀, params, 0.0)
 
-    prob = ODEProblem(accel, s₀, (0.0,65.0), params)
-    sol = solve(prob)
-
+    ts = time_ns()
+    prob = ODEProblem(accel, s₀, (0.0,5000.0), params)
+    sol = solve(prob,Tsit5())
+    te = time_ns()-ts
+    display(te*1e-9)
     
     times = sol.t
     states = sol.u
 
-    plotMesh(states, EL, times)
+    plotMesh(states, EL, "5000s.mp4")
     # @pt times
     # @pt states
 
@@ -84,12 +88,9 @@ function accel(a, s, params, t)
         
         f[ne] += repeat(fe,3,1)
     end
-    bkpt =1
+
     # Add spring & damping forces  
     for ele = 1:size(EL,2)
-        tmp1 = 3*EL[1,ele].-[2; 1; 0]
-        tmp2 = (3*EL[1,ele].-[2; 1; 0]).+96
-        tmp3 = s[(3*EL[1,ele].-[2; 1; 0]).+96]
         P = [ (s[3*EL[1,ele].-[2; 1; 0;]])   (s[3*EL[2,ele].-[2; 1; 0;]]) ] # Coords of nodes belonging to this spring
         V = [ s[(3*EL[1,ele].-[2; 1; 0;]).+96]     s[(3*EL[2,ele].-[2; 1; 0;]).+96] ] # Velocities of nodes belonging to this spring
 
@@ -97,13 +98,9 @@ function accel(a, s, params, t)
 
         n_hat = [ ((P[:,2]-P[:,1])/norm) ((P[:,1]-P[:,2])/norm) ]   # This minus That for each node
 
-        spr = [ ((L[ele]*(norm-L[ele]))*n_hat[:,1])  (L[ele]*(norm-L[ele])*n_hat[:,2]) ] # k*(spring_length - spring_rest_length)*n_hat
+        spr = [ (((0.01*L[ele])*(norm-L[ele]))*n_hat[:,1])  ((0.01*L[ele])*(norm-L[ele])*n_hat[:,2]) ] # k*(spring_length - spring_rest_length)*n_hat
 
-        damp = [ ((1/c[ele])*lin.dot(V[:,2]-V[:,1], n_hat[:,1])*n_hat[:,1]) ((1/c[ele])*lin.dot(V[:,1]-V[:,2], n_hat[:,2])*n_hat[:,2]) ] # c * (V[that]-V[this] ⋅ n_hat[that-this]) * n_hat[that-this]
-
-        # F = [ (spr[:,1]+damp[:,1]) (spr[:,2]+damp[:,2])]
-
-        bkpt =1
+        damp = [ ((0.01*c[3*EL[1,ele]])*lin.dot(V[:,2]-V[:,1], n_hat[:,1])*n_hat[:,1]) ((0.01*c[3*EL[1,ele]])*lin.dot(V[:,1]-V[:,2], n_hat[:,2])*n_hat[:,2]) ] # c * (V[that]-V[this] ⋅ n_hat[that-this]) * n_hat[that-this]
           
         ne = [3*EL[1,ele].-[2; 1; 0] 3*EL[2,ele].-[2; 1; 0]] # Indexing for each node within force vector 
         
@@ -114,38 +111,35 @@ function accel(a, s, params, t)
         
     end
     f[fixed] .= 0
-    bkpt = 1
     a[1:96] = s[97:192]
     a[97:192] = f ./ m
 
     return a
 end
 
-function plotMesh(s, EL, t)
+function plotMesh(s, EL, file)
     scene = mk.Scene()
     mk.Camera3D(scene)
 
-    pts = []
+    pts = reshape(s[1][1:96],3, 32)'
     lines = Array{Float64, 2}(undef, length(EL),3)
+    lines[2*1-1,:] = s[1][3*EL[1,1].-[2;1;0]]
+    lines[2*1,:] = s[1][3*EL[2,1].-[2;1;0]]
 
-    for i ∈ size(s,1):size(s,1)
-        pts = reshape(s[i][1:96], 3, 32)' 
+        
+    ps = mk.scatter!(scene, pts, markersize=10, color = :red)
+    links = mk.linesegments!(scene, lines, colormap = :turku, linewidth = 2)
 
+    mk.record(scene, file, 1:size(s,1); framerate = 400) do i
+        pts = reshape(s[i][1:96],3, 32)'
+        
         for j ∈ 1:size(EL,2)
-            lines[2*j-1,:] = s[i][3*EL[1,j].-[2;1;0;]]
+            lines[2*j-1,:] = s[i][3*EL[1,j].-[2;1;0]]
             lines[2*j,:] = s[i][3*EL[2,j].-[2;1;0]]
         end
-        
-        mk.scatter!(scene, pts, markersize=10, color = :red)
-        mk.linesegments!(scene, lines, color = :red, linewidth = 2)
-        
+        ps[1] = pts
+        links[1] = lines
     end
-    display(scene)
-    # mk.record(scene, "test.mp4", 1:size(s,1); framerate = 30)
-        
-    # @pt lines
-    # @pt pts
-
-    # display(scn)
 end
+
 expShell()
