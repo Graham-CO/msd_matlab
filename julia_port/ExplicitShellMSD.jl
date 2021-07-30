@@ -6,7 +6,7 @@ import GLMakie as mk
 import DelimitedFiles: readdlm
 
 # Solution Parameters
-global const p = 0.0001              # applied pressure
+global const p = 1              # applied pressure
 global const fixed = 1:48       # fixed nodes (edges)
 global const th = 0.1           # material thickness
 global const rho = 10           # material density
@@ -23,7 +23,7 @@ function expShell()
         eb = PL[:, CL[3,el]] - PL[:, CL[1,el]]
         A = lin.norm(lin.cross(ea,eb)/2)
         ne = [3*CL[1,el].-[2; 1; 0] 3*CL[2,el].-[2; 1; 0] 3*CL[3,el].-[2; 1; 0]]
-        m[ne] .+= (th*rho*A/3)*1000  # mass is calc'd as th*density*area/3 - three is since 3 points on tri --- iterated for each triangle the mass belongs to
+        m[ne] .+= (th*rho*A/3)*10000000  # mass is calc'd as th*density*area/3 - three is since 3 points on tri --- iterated for each triangle the mass belongs to
     end
     # m[fixed] .= 1e10
     
@@ -49,7 +49,7 @@ function expShell()
     # accel(du,s₀, params, 0.0)
 
     ts = time_ns()
-    prob = ODEProblem(accel, s₀, (0.0,7500.0), params)
+    prob = ODEProblem(accel, s₀, (0.0,5000.0), params)
     sol = solve(prob,Tsit5())
     te = time_ns()-ts
     display(te*1e-9)
@@ -57,7 +57,7 @@ function expShell()
     times = sol.t
     states = sol.u
 
-    plotMesh(states, EL, "test.mp4")
+    plotMesh(states, EL, "5000s.mp4")
     # @pt times
     # @pt states
 
@@ -98,14 +98,14 @@ function accel(a, s, params, t)
 
         n_hat = [ ((P[:,2]-P[:,1])/norm) ((P[:,1]-P[:,2])/norm) ]   # This minus That for each node
 
-        spr = [ (((0.00001*L[ele])*(norm-L[ele]))*n_hat[:,1])  ((0.00001*L[ele])*(norm-L[ele])*n_hat[:,2]) ] # k*(spring_length - spring_rest_length)*n_hat
+        spr = [ (((0.01*L[ele])*(norm-L[ele]))*n_hat[:,1])  ((0.01*L[ele])*(norm-L[ele])*n_hat[:,2]) ] # k*(spring_length - spring_rest_length)*n_hat
 
-        damp = [ ((c[3*EL[1,ele]])*lin.dot(V[:,2]-V[:,1], n_hat[:,1])*n_hat[:,1]) ((c[3*EL[1,ele]])*lin.dot(V[:,1]-V[:,2], n_hat[:,2])*n_hat[:,2]) ] # c * (V[that]-V[this] ⋅ n_hat[that-this]) * n_hat[that-this]
+        damp = [ ((0.01*c[3*EL[1,ele]])*lin.dot(V[:,2]-V[:,1], n_hat[:,1])*n_hat[:,1]) ((0.01*c[3*EL[1,ele]])*lin.dot(V[:,1]-V[:,2], n_hat[:,2])*n_hat[:,2]) ] # c * (V[that]-V[this] ⋅ n_hat[that-this]) * n_hat[that-this]
           
         ne = [3*EL[1,ele].-[2; 1; 0] 3*EL[2,ele].-[2; 1; 0]] # Indexing for each node within force vector 
         
-        f[ne[:,1]] += 0.01*( spr[:,1] + damp[:,1]) 
-        f[ne[:,2]] += 0.01*( spr[:,2] + damp[:,2])
+        f[ne[:,1]] += ( spr[:,1] + damp[:,1]) 
+        f[ne[:,2]] += ( spr[:,2] + damp[:,2])
 
 
         
@@ -130,7 +130,7 @@ function plotMesh(s, EL, file)
     ps = mk.scatter!(scene, pts, markersize=10, color = :red)
     links = mk.linesegments!(scene, lines, colormap = :turku, linewidth = 2)
 
-    mk.record(scene, file, 1:size(s,1); framerate = 40) do i
+    mk.record(scene, file, 1:size(s,1); framerate = 400) do i
         pts = reshape(s[i][1:96],3, 32)'
         
         for j ∈ 1:size(EL,2)
