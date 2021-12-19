@@ -49,7 +49,7 @@ function expShell()
     # accel(du,s₀, params, 0.0)
 
     ts = time_ns()
-    prob = ODEProblem(accel, s₀, (0.0,5000.0), params)
+    prob = ODEProblem(accel, s₀, (0.0,6000.0), params)
     sol = solve(prob,Tsit5())
     te = time_ns()-ts
     display(te*1e-9)
@@ -57,7 +57,7 @@ function expShell()
     times = sol.t
     states = sol.u
 
-    plotMesh(states, EL, "5000s.mp4")
+    plotMesh(states, EL, "6000s.mp4")
     # @pt times
     # @pt states
 
@@ -100,7 +100,7 @@ function accel(a, s, params, t)
 
         spr = [ (((0.01*L[ele])*(norm-L[ele]))*n_hat[:,1])  ((0.01*L[ele])*(norm-L[ele])*n_hat[:,2]) ] # k*(spring_length - spring_rest_length)*n_hat
 
-        damp = [ ((0.01*c[3*EL[1,ele]])*lin.dot(V[:,2]-V[:,1], n_hat[:,1])*n_hat[:,1]) ((0.01*c[3*EL[1,ele]])*lin.dot(V[:,1]-V[:,2], n_hat[:,2])*n_hat[:,2]) ] # c * (V[that]-V[this] ⋅ n_hat[that-this]) * n_hat[that-this]
+        damp = [ ((0.1*c[3*EL[1,ele]])*lin.dot(V[:,2]-V[:,1], n_hat[:,1])*n_hat[:,1]) ((0.1*c[3*EL[1,ele]])*lin.dot(V[:,1]-V[:,2], n_hat[:,2])*n_hat[:,2]) ] # c * (V[that]-V[this] ⋅ n_hat[that-this]) * n_hat[that-this]
           
         ne = [3*EL[1,ele].-[2; 1; 0] 3*EL[2,ele].-[2; 1; 0]] # Indexing for each node within force vector 
         
@@ -130,7 +130,7 @@ function plotMesh(s, EL, file)
     ps = mk.scatter!(scene, pts, markersize=10, color = :red)
     links = mk.linesegments!(scene, lines, colormap = :turku, linewidth = 2)
 
-    mk.record(scene, file, 1:size(s,1); framerate = 400) do i
+    mk.record(scene, file, 1:size(s,1); framerate = 300) do i
         pts = reshape(s[i][1:96],3, 32)'
         
         for j ∈ 1:size(EL,2)

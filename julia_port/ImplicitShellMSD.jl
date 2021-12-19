@@ -1,3 +1,10 @@
+## Graham Williams
+# grwi2594@colorado.edu
+
+# credit to Lawrence Smith for original MATLAB code
+# lasm4254@colorado.edu
+
+
 using BenchmarkTools
 using Makie
 using GeometryBasics
@@ -47,7 +54,7 @@ function impShell()
     d_predict = Matrix{Float64}(undef,96,1)
     # f = Array{Float64, 1}(undef, length(PL))
     
-    ts = time_ns()
+    
     for t = 0:dt:tsim
 
         i = reshape(Int[], 0, 2) # index vec for sparse mat
@@ -66,7 +73,10 @@ function impShell()
             # Nodal degrees of freedom
             ne = vec([3*EL[1, ele].-[2; 1; 0;]' 3*EL[2,ele].-[2;1;0]'])
             
+            ts = time_ns()
             je, ie = meshgrid(ne)
+            te = time_ns() - ts
+            display(te*1e-9)
                      
             i= vcat(i, [ie[:] je[:]])
             k = vcat(k, ke[:])           
@@ -74,6 +84,7 @@ function impShell()
         
         
         K = accumarray(i,k)
+        
         
         
         
@@ -105,10 +116,9 @@ function impShell()
         # Apply Correctors
         v = v_predict + gamma*dt*a
         d = d_predict + beta*dt^2*a   
-        bkpt = 1   
+  
     end
-    te = time_ns() - ts
-    display(te*1e-9)
+    
     
 end
 
@@ -155,7 +165,7 @@ end
 
 meshgrid(v::AbstractVector) = meshgrid(v,v)
 
-for i ∈ 1:5
+for i ∈ 1:20
     impShell()
 end
 
