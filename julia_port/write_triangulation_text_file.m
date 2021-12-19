@@ -1,5 +1,12 @@
+%% Graham Williams
+% grwi2594@colorado.edu
+
+%% Credit to Jacob Haimes
+% jacob.haimes@colorado.edu
+
+
 clear; close all; clc;
-% email to grwi2594@colorado.edu
+
 
 %% Load previously formatted data
 load('mesh.mat')

@@ -54,7 +54,7 @@ C = damp*M;
 d = zeros(numel(PT),1);
 v = zeros(numel(PT),1);
 
-tic
+
 for t = 0:dt:tsim
     
     i = []; %initialize indexing vector for sparse matrix
@@ -72,7 +72,9 @@ for t = 0:dt:tsim
         
         %identify the nodal degrees of freedom
         ne = [3*e(el,1)-[2 1 0] 3*e(el,2)-[2 1 0]];
+        tic
         [je, ie] = meshgrid(ne);
+        toc
         
         %Store the indices and stiffness values into arrays
         i = [i; [ie(:) je(:)]];
@@ -82,9 +84,9 @@ for t = 0:dt:tsim
     
     %accumulate the stiffness array
 %     K = sparse(i(:,1),i(:,2),k); %I wonder if sparse matrix is faster?
-
+    
     K = accumarray(i,k);
-
+    
    
     i = []; %initialize indexing vector for sparse matrix
     
@@ -117,11 +119,10 @@ for t = 0:dt:tsim
       
     %display
 
-    trimesh(triangulation(CM,PT + reshape(d,3,[])'),'facecolor','w','edgecolor','b')
-    axis([0 1 0 1 0 1])
-    drawnow()
+%     trimesh(triangulation(CM,PT + reshape(d,3,[])'),'facecolor','w','edgecolor','b')
+%     axis([0 1 0 1 0 1])
+%     drawnow()
 
-bkpt=1
+
 end
 
-toc

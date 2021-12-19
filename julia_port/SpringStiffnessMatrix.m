@@ -1,3 +1,5 @@
+%% Credit to Lawrence Smith | lasm4254@colorado.edu
+
 function [K] = SpringStiffnessMatrix(V,k)
 
 %V = 2x3 matrix of the global coords of the four nodes
